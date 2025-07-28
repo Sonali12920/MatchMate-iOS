@@ -9,9 +9,12 @@ import SwiftUI
 
 @main
 struct MatchMateApp: App {
+    let coreDataManager = CoreDataManager.shared
+    
     var body: some Scene {
         WindowGroup {
             UserListView()
+                .environment(\.managedObjectContext, coreDataManager.context)
         }
     }
 }
