@@ -9,25 +9,6 @@ import Foundation
 import SwiftUI
 import Combine
 
-class UserListViewModel: ObservableObject {
-    @Published var users: [UserProfile] = []
-    @Published var errorMessage: String? = nil
-    
-    private var cancellables = Set<AnyCancellable>()
-    
-    func loadUsers() {
-        APIService.shared.fetchUsers()
-            .sink(receiveCompletion: { completion in
-                if case let .failure(error) = completion {
-                    self.errorMessage = error.localizedDescription
-                }
-            }, receiveValue: { users in
-                self.users = users
-            })
-            .store(in: &cancellables)
-    }
-}
-
 struct UserListView: View {
     @StateObject private var viewModel = UserListViewModel()
     
@@ -54,7 +35,8 @@ struct UserListView: View {
             }
             .navigationTitle("MatchMate")
             .onAppear {
-                viewModel.loadUsers()
+                viewModel.loadCachedUsers()
+                viewModel.fetchUsersFromAPI()
             }
         }
     }

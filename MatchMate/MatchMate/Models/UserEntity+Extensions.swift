@@ -6,7 +6,6 @@
 //
 
 import Foundation
-import Foundation
 
 extension UserEntity {
     var toUserProfile: UserProfile {
