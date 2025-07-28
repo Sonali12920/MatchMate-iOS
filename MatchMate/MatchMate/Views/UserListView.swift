@@ -15,28 +15,30 @@ struct UserListView: View {
     var body: some View {
         NavigationView {
             List(viewModel.users) { user in
-                HStack {
-                    AsyncImage(url: URL(string: user.picture.large)) { image in
-                        image.resizable()
-                    } placeholder: {
-                        ProgressView()
-                    }
-                    .frame(width: 60, height: 60)
-                    .clipShape(Circle())
-                    
-                    VStack(alignment: .leading) {
-                        Text(user.name.fullName)
-                            .font(.headline)
-                        Text(user.location.city + ", " + user.location.country)
-                            .font(.subheadline)
-                            .foregroundColor(.gray)
+                NavigationLink(destination: MatchCardView(user: user)) {
+                    HStack {
+                        AsyncImage(url: URL(string: user.picture.large)) { image in
+                            image.resizable()
+                        } placeholder: {
+                            ProgressView()
+                        }
+                        .frame(width: 60, height: 60)
+                        .clipShape(Circle())
+                        
+                        VStack(alignment: .leading) {
+                            Text(user.name.fullName)
+                                .font(.headline)
+                            Text(user.location.city + ", " + user.location.country)
+                                .font(.subheadline)
+                                .foregroundColor(.gray)
+                        }
                     }
                 }
+                .buttonStyle(PlainButtonStyle())
             }
             .navigationTitle("MatchMate")
-            .onAppear {
-                viewModel.loadCachedUsers()
-                viewModel.fetchUsersFromAPI()
+            .task {
+                viewModel.initializeData()
             }
         }
     }

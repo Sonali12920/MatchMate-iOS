@@ -14,10 +14,9 @@ class UserListViewModel: ObservableObject {
     
     private var cancellables = Set<AnyCancellable>()
     private let context = CoreDataManager.shared.context
+    private var isDataLoaded = false
     
     init() {
-        loadCachedUsers()        // Load offline data
-        fetchUsersFromAPI()      // Fetch new users from API
     }
     
     /// Loads cached data from Core Data
@@ -33,6 +32,13 @@ class UserListViewModel: ObservableObject {
     
     /// Fetches users from API and stores to Core Data
     func fetchUsersFromAPI() {
+        guard !isDataLoaded else {
+            print("Data already loaded, skipping API call")
+            return
+        }
+        
+        isDataLoaded = true
+        
         APIService.shared.fetchUsers()
             .receive(on: DispatchQueue.main)
             .sink { completion in
@@ -70,5 +76,15 @@ class UserListViewModel: ObservableObject {
         }
         
         CoreDataManager.shared.saveContext()
+    }
+    
+    func initializeData() {
+        // First try to load from Core Data
+        loadCachedUsers()
+        
+        // If no cached data, fetch from API
+        if users.isEmpty {
+            fetchUsersFromAPI()
+        }
     }
 }
