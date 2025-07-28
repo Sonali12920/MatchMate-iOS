@@ -78,6 +78,7 @@ class UserListViewModel: ObservableObject {
         CoreDataManager.shared.saveContext()
     }
     
+    /// Initialize data (called once from view lifecycle)
     func initializeData() {
         // First try to load from Core Data
         loadCachedUsers()
@@ -86,5 +87,28 @@ class UserListViewModel: ObservableObject {
         if users.isEmpty {
             fetchUsersFromAPI()
         }
+    }
+    
+    /// Clear all cached data and reset
+    func clearCache() {
+        // Clear Core Data
+        let fetchRequest: NSFetchRequest<NSFetchRequestResult> = UserEntity.fetchRequest()
+        let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
+        
+        do {
+            try context.execute(deleteRequest)
+            CoreDataManager.shared.saveContext()
+            print("Cache cleared successfully")
+        } catch {
+            print("Failed to clear cache: \(error)")
+        }
+        
+        // Reset state
+        users = []
+        isDataLoaded = false
+        cancellables.removeAll()
+        
+        // Fetch fresh data
+        fetchUsersFromAPI()
     }
 }
