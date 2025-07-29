@@ -12,14 +12,15 @@ class APIService {
     static let shared = APIService()
     private init() {}
     
-    func fetchUsers() -> AnyPublisher<[UserProfile], Error> {
-        let url = URL(string: "https://randomuser.me/api/?results=10")!
+    func fetchUsers(page: Int = 1) -> AnyPublisher<[UserProfile], Error> {
+        let url = URL(string: "https://randomuser.me/api/?results=10&page=\(page)")!
         
         return URLSession.shared.dataTaskPublisher(for: url)
-            .map { $0.data }
+            .map(\.data)
             .decode(type: UserResponse.self, decoder: JSONDecoder())
-            .map { $0.results }
+            .map(\.results)
             .receive(on: DispatchQueue.main)
             .eraseToAnyPublisher()
     }
+
 }

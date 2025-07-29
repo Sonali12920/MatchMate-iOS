@@ -14,13 +14,16 @@ class UserListViewModel: ObservableObject {
     @Published var users: [UserProfile] = []
     @Published var errorMessage: ErrorMessage? = nil
     @Published var isOffline: Bool = false
+    @Published var isLoading = false
     
     private var cancellables = Set<AnyCancellable>()
     private let context = CoreDataManager.shared.context
-    private var isDataLoaded = false
-    
     private let monitor = NWPathMonitor()
     private let monitorQueue = DispatchQueue(label: "NetworkMonitor")
+    
+    private var page = 1
+    private var isFetchingMore = false
+    private var isInitialLoadComplete = false
     
     init() {
         monitor.pathUpdateHandler = { [weak self] path in
@@ -44,38 +47,50 @@ class UserListViewModel: ObservableObject {
         }
     }
     
-    /// Fetches users from API and stores to Core Data
-    func fetchUsersFromAPI() {
-        guard !isDataLoaded else {
-            print("Data already loaded, skipping API call")
-            return
+    /// Fetch users from API with pagination
+    func fetchUsersFromAPI(reset: Bool = false) {
+        guard !isFetchingMore else { return }
+        
+        isFetchingMore = true
+        isLoading = true
+        
+        if reset {
+            page = 1
+            users = []
+            clearCacheOnly()
         }
         
-        isDataLoaded = true
-        
-        APIService.shared.fetchUsers()
+        APIService.shared.fetchUsers(page: page)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] completion in
+                guard let self = self else { return }
+                self.isFetchingMore = false
+                self.isLoading = false
+                
                 switch completion {
                 case .failure(let error):
                     print("API Error: \(error)")
-                    self?.errorMessage = ErrorMessage(message: "Failed to fetch users from server. Please check your connection.")
+                    self.errorMessage = ErrorMessage(message: "Failed to fetch users from server. Please check your connection.")
                 case .finished:
                     break
                 }
             } receiveValue: { [weak self] profiles in
                 guard let self = self else { return }
                 
-                self.users = profiles
-                self.saveUsersToCoreData(profiles)
+                if self.page == 1 {
+                    self.saveUsersToCoreData(profiles)
+                }
+                
+                self.users.append(contentsOf: profiles)
+                self.page += 1
                 self.errorMessage = nil
+                self.isInitialLoadComplete = true
             }
             .store(in: &cancellables)
     }
     
     /// Save API users to Core Data
     func saveUsersToCoreData(_ users: [UserProfile]) {
-        // Clear existing data
         let fetchRequest: NSFetchRequest<NSFetchRequestResult> = UserEntity.fetchRequest()
         let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
         
@@ -85,7 +100,6 @@ class UserListViewModel: ObservableObject {
             print("Failed to clear old users: \(error)")
         }
         
-        // Add new users
         for user in users {
             let entity = UserEntity(context: context)
             entity.update(from: user)
@@ -96,41 +110,43 @@ class UserListViewModel: ObservableObject {
     
     /// Initialize data (called once from view lifecycle)
     func initializeData() {
-        // First try to load from Core Data
         loadCachedUsers()
         
-        // If no cached data, fetch from API
         if users.isEmpty {
             fetchUsersFromAPI()
         }
     }
     
-    /// Clear all cached data and reset
-    func clearCache() {
-        // Clear Core Data
+    /// Clear cached users from Core Data only (no API call)
+    private func clearCacheOnly() {
         let fetchRequest: NSFetchRequest<NSFetchRequestResult> = UserEntity.fetchRequest()
         let deleteRequest = NSBatchDeleteRequest(fetchRequest: fetchRequest)
         
         do {
             try context.execute(deleteRequest)
             CoreDataManager.shared.saveContext()
-            print("Cache cleared successfully")
         } catch {
             print("Failed to clear cache: \(error)")
         }
-        
-        // Reset state
+    }
+    
+    /// Clear all cached data and fetch fresh users
+    func clearCache() {
         users = []
-        isDataLoaded = false
+        page = 1
         cancellables.removeAll()
-        
-        // Fetch fresh data
+        fetchUsersFromAPI(reset: true)
+    }
+    
+    /// Trigger fetch for next page when user scrolls to last
+    func fetchMoreIfNeeded(currentUser: UserProfile) {
+        guard !isOffline, currentUser.id == users.last?.id else { return }
         fetchUsersFromAPI()
     }
     
     /// Call this when network is restored to sync local changes to server (if backend exists)
     func syncLocalChangesIfNeeded() {
-        // Placeholder: No-op for randomuser.me, but here is where you'd sync with a real backend
+        // Placeholder
     }
 }
 

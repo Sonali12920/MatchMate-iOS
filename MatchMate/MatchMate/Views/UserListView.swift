@@ -24,9 +24,26 @@ struct UserListView: View {
                         .foregroundColor(.white)
                         .font(.subheadline)
                 }
-                List(viewModel.users) { user in
-                    UserCardView(user: user)
+                
+                List {
+                    ForEach(viewModel.users) { user in
+                        UserCardView(user: user)
+                            .onAppear {
+                                viewModel.fetchMoreIfNeeded(currentUser: user)
+                            }
+                    }
+                    
+                    if viewModel.isLoading {
+                        HStack {
+                            Spacer()
+                            ProgressView()
+                            Spacer()
+                        }
+                        .padding(.vertical, 8)
+                    }
                 }
+                .listStyle(PlainListStyle())
+                
                 .navigationTitle("MatchMate")
                 .toolbar {
                     ToolbarItem(placement: .navigationBarTrailing) {
