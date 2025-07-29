@@ -108,6 +108,15 @@ MatchMate/
 ├── Resources/
 │ └── MatchMateModel.xcdatamodeld
 
+SS/Video-
+
+<img width="1290" height="2796" alt="Simulator Screenshot - iPhone 16 Plus - 2025-07-29 at 23 01 13" src="https://github.com/user-attachments/assets/e0178bd2-c707-4b50-824e-9ce0a3d74e27" />
+
+<img width="1290" height="2796" alt="Simulator Screenshot - iPhone 16 Plus - 2025-07-29 at 22 30 04" src="https://github.com/user-attachments/assets/c417d32b-08ee-4df3-850a-4c7bc1045704" />
+
+
+https://github.com/user-attachments/assets/1295328c-1bca-4c28-a6d9-c3d08e43b3e1
+
 
 ---
 
