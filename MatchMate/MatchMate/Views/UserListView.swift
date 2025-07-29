@@ -15,22 +15,41 @@ struct UserListView: View {
     
     var body: some View {
         NavigationView {
-            List(viewModel.users) { user in
-                UserCardView(user: user)
-            }
-            .navigationTitle("MatchMate")
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: {
-                        viewModel.clearCache()
-                    }) {
-                        Image(systemName: "arrow.clockwise")
-                            .foregroundColor(.blue)
+            VStack(spacing: 0) {
+                if viewModel.isOffline {
+                    Text("Offline Mode: Showing cached data")
+                        .frame(maxWidth: .infinity)
+                        .padding(8)
+                        .background(Color.red)
+                        .foregroundColor(.white)
+                        .font(.subheadline)
+                }
+                List(viewModel.users) { user in
+                    UserCardView(user: user)
+                }
+                .navigationTitle("MatchMate")
+                .toolbar {
+                    ToolbarItem(placement: .navigationBarTrailing) {
+                        Button(action: {
+                            viewModel.clearCache()
+                        }) {
+                            Image(systemName: "arrow.clockwise")
+                                .foregroundColor(.blue)
+                        }
                     }
                 }
-            }
-            .task {
-                viewModel.initializeData()
+                .task {
+                    viewModel.initializeData()
+                }
+                .alert(item: $viewModel.errorMessage) { errorMessage in
+                    Alert(
+                        title: Text("Error"),
+                        message: Text(errorMessage.message),
+                        dismissButton: .default(Text("OK")) {
+                            viewModel.errorMessage = nil
+                        }
+                    )
+                }
             }
         }
     }

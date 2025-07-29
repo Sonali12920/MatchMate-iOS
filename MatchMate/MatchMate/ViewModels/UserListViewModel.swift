@@ -8,15 +8,27 @@
 import Foundation
 import Combine
 import CoreData
+import Network
 
 class UserListViewModel: ObservableObject {
     @Published var users: [UserProfile] = []
+    @Published var errorMessage: ErrorMessage? = nil
+    @Published var isOffline: Bool = false
     
     private var cancellables = Set<AnyCancellable>()
     private let context = CoreDataManager.shared.context
     private var isDataLoaded = false
     
+    private let monitor = NWPathMonitor()
+    private let monitorQueue = DispatchQueue(label: "NetworkMonitor")
+    
     init() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            DispatchQueue.main.async {
+                self?.isOffline = (path.status != .satisfied)
+            }
+        }
+        monitor.start(queue: monitorQueue)
     }
     
     /// Loads cached data from Core Data
@@ -25,8 +37,10 @@ class UserListViewModel: ObservableObject {
         do {
             let cachedUsers = try context.fetch(request)
             self.users = cachedUsers.map { $0.toUserProfile }
+            self.errorMessage = nil
         } catch {
             print("Failed to load users from Core Data: \(error)")
+            self.errorMessage = ErrorMessage(message: "Failed to load saved users. Please try again.")
         }
     }
     
@@ -41,10 +55,11 @@ class UserListViewModel: ObservableObject {
         
         APIService.shared.fetchUsers()
             .receive(on: DispatchQueue.main)
-            .sink { completion in
+            .sink { [weak self] completion in
                 switch completion {
                 case .failure(let error):
                     print("API Error: \(error)")
+                    self?.errorMessage = ErrorMessage(message: "Failed to fetch users from server. Please check your connection.")
                 case .finished:
                     break
                 }
@@ -53,6 +68,7 @@ class UserListViewModel: ObservableObject {
                 
                 self.users = profiles
                 self.saveUsersToCoreData(profiles)
+                self.errorMessage = nil
             }
             .store(in: &cancellables)
     }
@@ -111,4 +127,14 @@ class UserListViewModel: ObservableObject {
         // Fetch fresh data
         fetchUsersFromAPI()
     }
+    
+    /// Call this when network is restored to sync local changes to server (if backend exists)
+    func syncLocalChangesIfNeeded() {
+        // Placeholder: No-op for randomuser.me, but here is where you'd sync with a real backend
+    }
+}
+
+struct ErrorMessage: Identifiable {
+    let id = UUID()
+    let message: String
 }
